@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Kirish | Face ID</title><link rel="stylesheet" href="{% static 'app/content/style.css' %}"></head>
+<body>
+<div class="container auth-card">
+  <div class="card">
+    <div class="header-left"><div class="logo">🔐</div><div><h1>Kirish</h1><p class="hint">Login + parol + Face ID orqali xavfsiz kirish.</p></div></div>
+    {% if messages %}{% for message in messages %}<div class="ai-alert {{ message.tags|default:'low' }}"><p>{{ message }}</p></div>{% endfor %}{% endif %}
+    <form method="POST" class="form-grid" id="loginForm">{% csrf_token %}
+      <input type="text" name="username" placeholder="Login" autocomplete="username" required>
+      <input type="password" name="password" placeholder="Parol" autocomplete="current-password" required>
+      <video id="video" class="camera" autoplay muted playsinline></video>
+      <canvas id="canvas" style="display:none"></canvas>
+      <input type="hidden" name="face_image" id="face_image">
+      <div class="actions">
+        <button class="btn-secondary" type="button" onclick="takePhoto()">📷 Face ID rasm olish</button>
+        <button class="btn-primary" type="submit" id="saveBtn">Kirish</button>
+        <a class="btn-secondary" href="{% url 'faceid_capture' %}">Ro‘yxatdan o‘tish</a>
+        <a class="btn-secondary" href="{% url 'home' %}">Bosh sahifa</a>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+const video=document.getElementById('video'),canvas=document.getElementById('canvas'),faceInput=document.getElementById('face_image'),form=document.getElementById('loginForm'),saveBtn=document.getElementById('saveBtn');
+async function openCamera(){try{video.srcObject=await navigator.mediaDevices.getUserMedia({video:true});}catch(e){alert('Kamera ochilmadi. Brauzerda camera ruxsatini bering.');}}
+function takePhoto(){canvas.width=video.videoWidth||640;canvas.height=video.videoHeight||480;canvas.getContext('2d').drawImage(video,0,0,canvas.width,canvas.height);faceInput.value=canvas.toDataURL('image/png');alert('Face ID rasm olindi. Endi Kirishni bosing.');}
+form.addEventListener('submit',e=>{if(!faceInput.value){e.preventDefault();alert('Avval Face ID rasm oling!');return;}saveBtn.disabled=true;saveBtn.textContent='Tekshirilmoqda...';});
+openCamera();
+</script>
+</body></html>

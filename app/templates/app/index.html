@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Tibbiyot Halollik Tizimi</title>
+    <link rel="stylesheet" href="{% static 'app/content/style.css' %}">
+</head>
+<body>
+
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="logo">🛡️</div>
+                    <div class="header-title">
+                        <h1>Tibbiyot Halollik Tizimi</h1>
+                        <p>Korrupsiyaga qarshi monitoring platformasi</p>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <div>
+                        <p class="date-label">Bugun</p>
+                        <p class="date-value">{{ today }}</p>
+                    </div>
+
+                    <div class="user-info">
+                        <span class="user-role">
+                            {% if request.user.is_authenticated %}
+                            {{ request.user.username }} |
+                            {% if is_admin %}Admin
+                            {% elif is_doctor %}Shifokor
+                            {% elif is_pharmacy %}Dorixona
+                            {% else %}Oddiy aholi
+                            {% endif %}
+                            {% else %}
+                            Oddiy aholi
+                            {% endif %}
+                        </span>
+
+                        {% if is_admin %}
+                        <a href="{% url 'admin_register' %}" class="btn-primary">Xodim qo‘shish</a>
+                        {% endif %}
+                        {% if is_doctor or is_admin %}
+                        <a href="{% url 'doctor_dashboard' %}" class="btn-primary">Doktor paneli</a>
+                        {% endif %}
+                        {% if is_pharmacy or is_admin %}
+                        <a href="{% url 'claim_verify' %}" class="btn-primary">QR tasdiqlash</a>
+                        {% endif %}
+                        {% if request.user.is_authenticated and is_citizen %}
+                        <a href="{% url 'patient_profile' %}" class="btn-primary">Profilim</a>
+                        {% endif %}
+                        <a href="{% url 'institutions_map' %}" class="btn-secondary">Xarita</a>
+
+                        {% if request.user.is_authenticated %}
+                        <a href="{% url 'logout' %}" class="btn-secondary">Chiqish</a>
+                        {% else %}
+                        <a href="{% url 'login' %}" class="btn-primary">Kirish</a>
+                        <a href="{% url 'register' %}" class="btn-secondary">Ro‘yxatdan o‘tish</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="navigation">
+        <div class="container">
+            <div class="nav-tabs">
+                <button class="nav-tab active" data-tab="overview">Umumiy ko‘rinish</button>
+                <button class="nav-tab" data-tab="faceid">Face ID</button>
+                <button class="nav-tab" data-tab="ai">AI tahlil</button>
+                <button class="nav-tab" data-tab="qr">QR kuzatuv</button>
+                <button class="nav-tab" data-tab="rating">Halollik reytingi</button>
+                <a class="nav-tab" href="{% url 'institutions_map' %}" style="text-decoration:none;">Xarita</a>
+                <button class="nav-tab" data-tab="expiration">Qayta aylanish</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+
+            {% if messages %}
+            {% for message in messages %}
+            <div class="ai-alert low">
+                <p class="alert-description">{{ message }}</p>
+            </div>
+            {% endfor %}
+            {% endif %}
+
+            <div id="overview-tab" class="tab-content active">
+                <div class="dashboard-stats">
+                    {% for stat in dashboard_stats %}
+                    <div class="stat-card">
+                        <div class="stat-content">
+                            <p class="stat-title">{{ stat.title }}</p>
+                            <div class="stat-value">{{ stat.value }}</div>
+                            <div class="stat-trend {{ stat.trend_type }}">{{ stat.trend }}</div>
+                        </div>
+                        <div class="stat-icon shield">🛡️</div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <span class="icon-purple">📊</span>
+                            <h2>AI avtomatik tahlil</h2>
+                        </div>
+                    </div>
+
+                    {% for alert in ai_alerts %}
+                    <div class="ai-alert {{ alert.severity }}">
+                        <div class="alert-header">
+                            <div class="alert-title">
+                                <span>⚠️</span>
+                                <h3>{{ alert.title }}</h3>
+                            </div>
+                            <span class="severity-badge {{ alert.severity }}">
+                                {{ alert.get_severity_display }}
+                            </span>
+                        </div>
+                        <p class="alert-description">{{ alert.description }}</p>
+                        <p class="alert-details">{{ alert.details }}</p>
+                    </div>
+                    {% empty %}
+                    <p>AI ogohlantirishlar yo‘q.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="faceid-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <span class="icon-blue">📷</span>
+                            <h2>Face ID Tekshiruvlari</h2>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <h3>Face ID ro‘yxatdan o‘tish</h3>
+                        <p>Yangi foydalanuvchi faqat bir marta Face ID profil yaratadi. Keyingi kirish login + parol + Face ID orqali bo‘ladi.</p>
+                        <a class="btn-primary" href="{% url 'faceid_capture' %}">Face ID profil yaratish</a>
+                    </div>
+                    {% for record in face_records %}
+                    <div class="verification-record">
+                        <div class="record-left">
+                            <div class="user-avatar">{{ record.full_name|slice:":1" }}</div>
+                            <div class="record-info">
+                                <h3>{{ record.full_name }}</h3>
+                                <p>{{ record.role }} • {{ record.institution.name }}</p>
+                            </div>
+                        </div>
+                        <div class="record-right">
+                            <span class="record-time">{{ record.checked_time|date:"H:i" }}</span>
+                            <span class="status-badge {{ record.status }}">
+                                {{ record.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p>Face ID ma’lumotlari yo‘q.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="ai-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <span class="icon-purple">🤖</span>
+                            <h2>AI Tahlil va Ogohlantirishlar</h2>
+                        </div>
+                    </div>
+
+                    {% for alert in ai_alerts %}
+                    <div class="ai-alert {{ alert.severity }}">
+                        <div class="alert-header">
+                            <div class="alert-title">
+                                <span>🚨</span>
+                                <h3>{{ alert.title }}</h3>
+                            </div>
+                            <span class="severity-badge {{ alert.severity }}">
+                                {{ alert.get_severity_display }}
+                            </span>
+                        </div>
+
+                        <p class="alert-description">{{ alert.description }}</p>
+                        <p class="alert-details">{{ alert.details }}</p>
+
+                        {% if can_change_data %}
+                        <div class="alert-actions">
+                            <form method="post" action="{% url 'resolve_alert' alert.id %}">
+                                {% csrf_token %}
+                                <button class="btn-primary" type="submit">Tekshirish / Hal qilindi</button>
+                            </form>
+
+                            <form method="post" action="{% url 'later_alert' alert.id %}">
+                                {% csrf_token %}
+                                <button class="btn-secondary" type="submit">Keyinroq</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <p class="alert-details">Siz faqat ko‘rish huquqiga egasiz.</p>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p>AI ogohlantirishlar yo‘q.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="qr-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <span class="icon-green">🔍</span>
+                            <h2>QR Kod Kuzatuv</h2>
+                        </div>
+                    </div>
+
+                    <form class="search-box" method="get" action="{% url 'home' %}">
+                        <input type="text" name="qr" placeholder="QR kodni kiriting" value="{{ qr_query }}">
+                        <button class="btn-primary" type="submit">Qidirish</button>
+                    </form>
+
+                    {% for medicine in medicines %}
+                    <div class="medication-info">
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <p>Dori nomi</p>
+                                <p>{{ medicine.name }}</p>
+                            </div>
+                            <div class="info-item">
+                                <p>Ishlab chiqaruvchi</p>
+                                <p>{{ medicine.manufacturer }}</p>
+                            </div>
+                            <div class="info-item">
+                                <p>QR kod</p>
+                                <p>{{ medicine.qr_code }}</p>
+                            </div>
+                            <div class="info-item">
+                                <p>Partiya</p>
+                                <p>{{ medicine.batch_number }}</p>
+                            </div>
+                            <div class="info-item">
+                                <p>Miqdor</p>
+                                <p>{{ medicine.quantity }} dona</p>
+                            </div>
+                            <div class="info-item">
+                                <p>Joylashuv</p>
+                                <p>{{ medicine.location }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p>Dori topilmadi.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="rating-tab" class="tab-content">
+
+                <div class="card rating-section">
+                
+                <div class="card-header">
+                <div class="card-title-group">
+                <span class="icon-yellow">🏆</span>
+                <div>
+                <h2>Halollik Reytingi</h2>
+                <p class="section-subtitle">
+                Tibbiyot muassasalarining shaffoflik va faoliyat reytingi
+                </p>
+                </div>
+                </div>
+                </div>
+                
+                <div class="rating-grid">
+                
+                {% for institution in institutions %}
+                
+                <div class="rating-card-modern">
+                
+                <div class="rating-top">
+                
+                <div>
+                <h3>{{ institution.name }}</h3>
+                <p>{{ institution.institution_type }}</p>
+                </div>
+                
+                <div class="rating-circle">
+                <span>{{ institution.rating }}%</span>
+                </div>
+                
+                </div>
+                
+                <div class="rating-progress">
+                <div class="rating-bar" style="width:{{ institution.rating }}%"></div>
+                </div>
+                
+                <div class="rating-meta">
+                
+                <div class="rating-meta-item">
+                <span>Shikoyatlar</span>
+                <b>{{ institution.complaints }}</b>
+                </div>
+                
+                <div class="rating-meta-item">
+                <span>Tekshiruvlar</span>
+                <b>{{ institution.checks_count }}</b>
+                </div>
+                
+                <div class="rating-meta-item">
+                <span>Holat</span>
+                <b>{{ institution.status }}</b>
+                </div>
+                
+                </div>
+                
+                </div>
+                
+                {% empty %}
+                
+                <div class="empty-box">
+                Reyting ma'lumotlari topilmadi
+                </div>
+                
+                {% endfor %}
+                
+                </div>
+                
+                </div>
+                
+                </div>
+
+            <div id="expiration-tab" class="tab-content">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <span class="icon-orange">⏰</span>
+                            <h2>Qayta Aylanish Nazorati</h2>
+                        </div>
+                    </div>
+
+                    {% for item in expiration_records %}
+                    <div class="medication-card {{ item.risk_level }}">
+                        <div class="medication-header">
+                            <div class="medication-details">
+                                <h3>{{ item.medicine.name }}</h3>
+                                <p>{{ item.medicine.location }}</p>
+                                <p>Partiya: {{ item.medicine.batch_number }}</p>
+                            </div>
+
+                            <div class="expiration-badge {{ item.risk_level }}">
+                                ⚠ {{ item.days_left }} kun
+                            </div>
+                        </div>
+
+                        <div class="medication-grid">
+                            <div class="medication-grid-item">
+                                <p>Miqdor</p>
+                                <p>{{ item.medicine.quantity }} dona</p>
+                            </div>
+                            <div class="medication-grid-item">
+                                <p>Holat</p>
+                                <p>{{ item.get_risk_level_display }}</p>
+                            </div>
+                            <div class="medication-grid-item">
+                                <p>Amal</p>
+                                <p>{{ item.action_required }}</p>
+                            </div>
+                        </div>
+
+                        {% if can_delete_medicine %}
+                        <div class="medication-actions">
+                            <form method="post" action="{% url 'delete_expired' item.id %}">
+                                {% csrf_token %}
+                                <button class="btn-danger" type="submit">Chiqarib tashlash</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <p class="alert-details">Siz dorilar bazasini o‘zgartira olmaysiz.</p>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <p>Muddati yaqin dorilar yo‘q.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-content">
+            <p>© 2026 O'zbekiston Sog'liqni Saqlash Vazirligi</p>
+            <p>Tibbiyotda shaffoflik va halollik tizimi</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'app/scripts/script.js' %}" defer></script>
+</body>
+</html>

@@ -1,0 +1,54 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Foydalanuvchi qo‘shish</title>
+    <link rel="stylesheet" href="{% static 'app/content/style.css' %}">
+</head>
+<body>
+
+    <div class="main-content">
+        <div class="container">
+            <div class="card" style="max-width: 460px; margin: 70px auto;">
+                <div class="card-header">
+                    <div class="card-title-group">
+                        <span class="icon-blue">👤</span>
+                        <h2>Yangi foydalanuvchi qo‘shish</h2>
+                    </div>
+                </div>
+
+                {% if messages %}
+                {% for message in messages %}
+                <div class="ai-alert low">
+                    <p class="alert-description">{{ message }}</p>
+                </div>
+                {% endfor %}
+                {% endif %}
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="search-box" style="display:block;">
+                        <input type="text" name="username" placeholder="Login" required style="width:100%; margin-bottom:12px;">
+                        <input type="password" name="password" placeholder="Parol" required style="width:100%; margin-bottom:12px;">
+
+                        <select name="role" required style="width:100%; padding:10px; margin-bottom:12px; border:1px solid #D1D5DB; border-radius:8px;">
+                            {% for role in roles %}
+                            <option value="{{ role }}">{{ role }}</option>
+                            {% endfor %}
+                        </select>
+
+                        <button class="btn-primary" type="submit" style="width:100%;">Qo‘shish</button>
+                    </div>
+                </form>
+
+                <a href="{% url 'home' %}" class="btn-secondary" style="display:block; text-align:center; text-decoration:none; margin-top:12px;">
+                    Orqaga
+                </a>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
